@@ -22,15 +22,13 @@ impl PromptGenerator {
         author_name: &str,
         referenced_message: Option<&str>,
     ) -> Result<String, Box<dyn Error>> {
-        let mut messages: Vec<Message> = vec![];
+        let mut messages = vec![];
 
-        if referenced_message.is_some() {
-            messages.push(Message::assistant(Content::SingleText(
-                referenced_message.unwrap().to_string(),
-            )));
-        } else {
-            messages.push(Message::user(Content::SingleText(user_message.to_string())));
-        };
+        if let Some(ref_message) = referenced_message {
+            messages.push(Message::assistant(ref_message));
+        }
+
+        messages.push(Message::user(user_message));
 
         let model = ClaudeModel::ClaudeSex;
         let max_tokens = MaxTokens::new(1024, model)?;

@@ -31,7 +31,7 @@ struct Handler {
 }
 
 impl Handler {
-    async fn bot_message_answer(&self, ctx: Context, msg: &Message) {
+    async fn bot_message_answer(&self, ctx: &Context, msg: &Message) {
         let author_nick = if let Some(guild_id) = msg.guild_id {
             match msg.author.nick_in(&ctx.http, guild_id).await {
                 Some(nick) => nick,
@@ -45,7 +45,7 @@ impl Handler {
             msg.author.name.clone()
         };
 
-        if self.message_condition(msg) {
+        if self.message_condition(&msg, &ctx).await {
             let ref_message: Option<&str> = if let Some(ref_msg) = &msg.referenced_message {
                 Some(ref_msg.content.as_str())
             } else {
@@ -58,8 +58,8 @@ impl Handler {
                 .await
             {
                 Ok(prompt_responce) => prompt_responce,
-                Err(error) => {
-                    println!("Error generating prompt: {}", error);
+                Err(why) => {
+                    println!("Error generating prompt: {}", why);
                     return;
                 }
             };
@@ -70,10 +70,20 @@ impl Handler {
         }
     }
 
-    fn message_condition(&self, msg: &Message) -> bool {
+    async fn message_condition(&self, msg: &Message, ctx: &Context) -> bool {
+        let current_bot_user = match ctx.http.get_current_user().await {
+            Ok(value) => value,
+            Err(why) => {
+                println!("Message condition error: {:?}", why);
+                return false;
+            }
+        };
+
         msg.content.to_lowercase().contains("олег")
-            || (msg.referenced_message.is_some()
-                && msg.referenced_message.as_ref().unwrap().author.bot) // 100% complete
+            || (msg
+                .referenced_message
+                .as_ref()
+                .is_some_and(|ref_msg| ref_msg.author.id.eq(&current_bot_user.id)))
     }
 }
 
@@ -84,6 +94,6 @@ impl EventHandler for Handler {
             return;
         }
 
-        self.bot_message_answer(ctx, &msg).await;
+        self.bot_message_answer(&ctx, &msg).await;
     }
 }
