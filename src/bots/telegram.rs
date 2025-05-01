@@ -13,6 +13,7 @@ impl Telegram {
 
     pub async fn start(&self) {
         let bot = Bot::new(&self.token);
+
         _ = self.bot_message_answer(bot).await;
     }
 
